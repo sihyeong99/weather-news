@@ -1,0 +1,1582 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>점곡 날씨 방송국</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gothic+A1:wght@400;600;800&display=swap">
+<style>
+/* 배치: 방송국 화면처럼 위에 방송 띠, 그 아래 단계 막대와 기자 배지. 학생 화면은 한 단계씩 보이고, 선생님 화면(#teacher)은 다섯 날씨를 나란히 비교한다.
+   날씨마다 고유한 색 하나(덥고 습함=주황, 춥고 바람=파랑, 맑음=노랑, 건조 바람=황토, 비=남색)를 정해 카드·칩·표 머리에 똑같이 쓴다.
+   교실 태블릿과 TV에서 똑같이 보이도록 밝은 화면 하나로 고정했다. */
+:root {
+  color-scheme: light;
+  --sky: #e8f1f8;
+  --card: #ffffff;
+  --ink: #15263a;
+  --ink-2: #4b5d70;
+  --line: #cdd9e4;
+  --studio: #15263a;
+  --cue: #ffd23f;
+  --onair: #e5483a;
+  --ok: #2a7a48; --ok-bg: #def1e4;
+  --warn: #b8402e; --warn-bg: #fbe5e0;
+  --w1: #d4552a; --w1-bg: #fde6da;
+  --w2: #2c6db0; --w2-bg: #dce9f7;
+  --w3: #b07800; --w3-bg: #fff1c4;
+  --w4: #92622a; --w4-bg: #f3e6d2;
+  --w5: #4f5f86; --w5-bg: #e2e6f1;
+  --wc: var(--ink); --wc-bg: #eef3f7;
+  --font-display: "Black Han Sans", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-body: "Gothic A1", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+}
+[data-w="1"] { --wc: var(--w1); --wc-bg: var(--w1-bg); }
+[data-w="2"] { --wc: var(--w2); --wc-bg: var(--w2-bg); }
+[data-w="3"] { --wc: var(--w3); --wc-bg: var(--w3-bg); }
+[data-w="4"] { --wc: var(--w4); --wc-bg: var(--w4-bg); }
+[data-w="5"] { --wc: var(--w5); --wc-bg: var(--w5-bg); }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { background: var(--sky); }
+body {
+  background: var(--sky); color: var(--ink);
+  font-family: var(--font-body); font-size: 18px; line-height: 1.65;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  -webkit-tap-highlight-color: transparent;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--studio); }
+h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 400; margin: 0; line-height: 1.25; text-wrap: balance; }
+p { margin: 0; }
+ul { margin: 0; padding: 0; list-style: none; }
+button { font: inherit; color: inherit; cursor: pointer; }
+input, textarea { font: inherit; color: var(--ink); }
+:focus-visible { outline: 3px solid var(--w2); outline-offset: 3px; }
+.wrap { max-width: 1080px; margin: 0 auto; }
+.bleed {
+  margin-left: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  margin-right: calc(-1 * max(16px, env(safe-area-inset-right, 0px)));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* 방송 띠 */
+.top { background: var(--studio); color: #eef4fa; padding-block: 18px 16px; }
+.top .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 20px; }
+.brand { display: grid; gap: 2px; min-width: 0; }
+.eyebrow { font-size: 0.85rem; letter-spacing: 0.06em; color: #a8bdd0; }
+.top h1 { font-size: clamp(1.9rem, 5.4vw, 2.6rem); color: #fff; letter-spacing: 0.01em; }
+.top .q { font-family: var(--font-display); font-size: clamp(1.05rem, 3vw, 1.35rem); color: var(--cue); }
+.onair { display: inline-flex; align-items: center; gap: 8px; border: 2px solid var(--onair); color: #fff; border-radius: 6px; padding: 4px 12px; font-weight: 800; font-size: 0.95rem; letter-spacing: 0.08em; }
+.onair i { width: 10px; height: 10px; border-radius: 50%; background: var(--onair); animation: blink 1.4s steps(2, start) infinite; }
+@keyframes blink { to { visibility: hidden; } }
+
+/* 단계 막대 */
+.steps { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--card); border-bottom: 1px solid var(--line); padding-block: 8px; }
+.steps ol { list-style: none; margin: 0 auto; padding: 0; max-width: 1080px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.steps button {
+  width: 100%; border: 1px solid var(--line); background: var(--sky); border-radius: 8px;
+  padding: 6px 4px; font-size: 0.9rem; font-weight: 600; line-height: 1.3; color: var(--ink-2);
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+}
+.steps button b { font-family: var(--font-display); font-weight: 400; font-size: 1.05rem; color: var(--ink-2); }
+.steps button[aria-current="step"] { background: var(--studio); border-color: var(--studio); color: #fff; }
+.steps button[aria-current="step"] b { color: var(--cue); }
+.steps button.done:not([aria-current="step"]) { background: var(--ok-bg); border-color: #b9dcc4; color: var(--ok); }
+.steps button.done:not([aria-current="step"]) b { color: var(--ok); }
+.steps button:disabled { opacity: 0.45; cursor: default; }
+
+/* 기자 배지 */
+.badge { margin: 14px auto 0; max-width: 1080px; display: flex; align-items: center; gap: 12px; background: var(--wc-bg); border: 2px solid var(--wc); border-radius: 12px; padding: 8px 14px; }
+.badge .no { flex: none; width: 44px; height: 44px; border-radius: 10px; background: var(--wc); color: #fff; display: grid; place-items: center; font-family: var(--font-display); font-size: 1.5rem; }
+.badge .t { min-width: 0; }
+.badge .t small { display: block; color: var(--ink-2); font-size: 0.85rem; }
+.badge .t strong { font-family: var(--font-display); font-weight: 400; font-size: 1.25rem; color: var(--ink); }
+
+/* 단계 화면 */
+main { padding-block: 18px 28px; }
+.view { display: grid; gap: 18px; }
+.head { display: grid; gap: 6px; }
+.head h2 { font-size: clamp(1.6rem, 4.4vw, 2.1rem); }
+.head p { color: var(--ink-2); max-width: 46em; }
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
+.panel h3 { font-size: 1.3rem; }
+.ask { font-weight: 800; font-size: 1.08rem; }
+.nav { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+.nav .msg { flex: 1 1 220px; color: var(--warn); font-weight: 600; min-height: 1.6em; }
+.btn { border: 2px solid var(--studio); background: var(--card); color: var(--studio); border-radius: 10px; padding: 10px 20px; font-weight: 800; font-size: 1.05rem; }
+.btn.main { background: var(--studio); color: #fff; }
+.btn.go { background: var(--wc); border-color: var(--wc); color: #fff; }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn.small { padding: 6px 12px; font-size: 0.92rem; border-width: 1px; }
+
+/* 1. 카드 뽑기 */
+.draw { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: center; }
+.deck-area { display: grid; justify-items: center; gap: 12px; }
+.deck { position: relative; width: min(260px, 70vw); aspect-ratio: 3 / 4; perspective: 1200px; border: 0; background: none; padding: 0; }
+.deck::before, .deck::after { content: ""; position: absolute; inset: 0; border-radius: 16px; background: #2b4563; border: 3px solid #fff; box-shadow: 0 2px 0 var(--line); }
+.deck::before { transform: translate(10px, 10px) rotate(3deg); }
+.deck::after { transform: translate(5px, 5px) rotate(1.5deg); }
+.deck[data-left="1"]::before, .deck[data-left="0"]::before, .deck[data-left="0"]::after { display: none; }
+.flip { position: absolute; inset: 0; z-index: 1; transform-style: preserve-3d; transition: transform 0.7s cubic-bezier(.3,.7,.2,1); }
+.flip.open { transform: rotateY(180deg); }
+.face { position: absolute; inset: 0; border-radius: 16px; backface-visibility: hidden; -webkit-backface-visibility: hidden; display: grid; place-items: center; overflow: hidden; }
+.face.back { background: var(--studio); border: 3px solid #fff; box-shadow: 0 6px 16px rgba(21, 38, 58, 0.25); color: #fff; text-align: center; padding: 16px; }
+.face.back .mark { font-family: var(--font-display); font-size: 4.4rem; line-height: 1; color: var(--cue); }
+.face.back small { display: block; font-size: 0.95rem; color: #c9d7e4; margin-top: 6px; }
+.face.front { transform: rotateY(180deg); background: var(--wc-bg); border: 3px solid var(--wc); align-content: start; justify-items: stretch; gap: 8px; padding: 14px; text-align: center; }
+.face.front .no { font-family: var(--font-display); font-size: 1.1rem; color: var(--wc); }
+.face.front canvas { width: 100%; border-radius: 8px; display: block; }
+.face.front strong { font-family: var(--font-display); font-weight: 400; font-size: 1.35rem; line-height: 1.3; }
+.left { font-weight: 800; color: var(--ink-2); }
+.left b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.pick-own { border-top: 1px dashed var(--line); padding-top: 12px; display: grid; gap: 10px; }
+.pick-own summary { cursor: pointer; color: var(--ink-2); font-weight: 600; }
+.own-list { display: grid; gap: 8px; margin-top: 10px; }
+.own-list button { display: flex; align-items: center; gap: 10px; text-align: left; border: 2px solid var(--wc); background: var(--wc-bg); border-radius: 10px; padding: 8px 12px; font-weight: 600; }
+.own-list button span { flex: none; width: 30px; height: 30px; border-radius: 8px; background: var(--wc); color: #fff; display: grid; place-items: center; font-family: var(--font-display); }
+.own-list button:disabled { opacity: 0.4; }
+.reveal-msg { font-family: var(--font-display); font-size: 1.4rem; color: var(--wc); }
+
+/* 2. 날씨 살펴보기 */
+.scene { width: 100%; aspect-ratio: 8 / 3; max-width: 100%; display: block; border-radius: 12px; background: #cfe0ee; }
+.look { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.gauges { display: grid; gap: 10px; }
+.gauge { display: grid; grid-template-columns: 5.2em minmax(0, 1fr); align-items: center; gap: 10px; }
+.gauge .name { font-weight: 800; }
+.gauge .bar { position: relative; height: 34px; border-radius: 17px; background: #eef2f6; border: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; padding: 0 12px; font-size: 0.85rem; color: var(--ink-2); }
+.gauge .bar .dot { position: absolute; top: 3px; height: 26px; min-width: 66px; padding: 0 10px; border-radius: 13px; background: var(--wc); color: #fff; font-weight: 800; display: grid; place-items: center; font-size: 0.92rem; transform: translateX(-50%); }
+.gauge.off .bar { background: repeating-linear-gradient(45deg, #f3f6f9 0 8px, #eaeff4 8px 16px); justify-content: center; }
+.gauge.off .name { color: #8b9aaa; }
+.gnote { font-size: 0.92rem; color: var(--ink-2); }
+.chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.chip { border: 2px solid var(--line); background: var(--card); border-radius: 999px; padding: 8px 16px; font-weight: 600; line-height: 1.4; text-align: left; display: inline-flex; align-items: center; gap: 8px; }
+.chip::before { content: ""; flex: none; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line); }
+.chip[aria-pressed="true"] { border-color: var(--wc); background: var(--wc-bg); }
+.chip[aria-pressed="true"]::before { border-color: var(--wc); background: var(--wc) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 14px no-repeat; }
+.chip.wrong { border-color: var(--warn); background: var(--warn-bg); animation: shake 0.4s; }
+.chip.wrong::before { border-color: var(--warn); }
+@keyframes shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+.hint { background: var(--wc-bg); border-radius: 10px; padding: 12px 14px; font-size: 0.98rem; }
+.hint b { color: var(--wc); }
+.hint.warn { background: var(--warn-bg); color: var(--ink); }
+.hint.warn b { color: var(--warn); }
+
+/* 3. 생활 취재 */
+.areas { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.area-tab { border: 2px solid var(--line); background: var(--card); border-radius: 12px; padding: 10px 4px 8px; display: grid; justify-items: center; gap: 4px; font-weight: 800; font-size: 0.95rem; line-height: 1.25; position: relative; }
+.area-tab svg { width: 30px; height: 30px; stroke: var(--ink-2); }
+.area-tab[aria-selected="true"] { border-color: var(--wc); background: var(--wc-bg); }
+.area-tab[aria-selected="true"] svg { stroke: var(--wc); }
+.area-tab.done::after { content: ""; position: absolute; top: 6px; right: 6px; width: 18px; height: 18px; border-radius: 50%; background: var(--ok) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 12px no-repeat; }
+.note { display: grid; gap: 6px; }
+.note label { font-weight: 600; color: var(--ink-2); font-size: 0.95rem; }
+.note input, .note textarea { width: 100%; border: 2px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--card); }
+.note input:focus, .note textarea:focus { border-color: var(--wc); outline: none; }
+.count { font-weight: 800; color: var(--ink-2); }
+.count b { color: var(--ok); font-variant-numeric: tabular-nums; }
+
+/* 4. 나누기 */
+.sorter { display: grid; gap: 10px; }
+.item { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 8px 8px 14px; background: var(--card); }
+.item .tx { min-width: 0; font-weight: 600; }
+.item .tx small { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 4px; background: var(--sky); color: var(--ink-2); font-size: 0.78rem; font-weight: 800; vertical-align: 1px; }
+.item .two { display: flex; gap: 6px; }
+.item .two button { border: 2px solid var(--line); background: var(--card); border-radius: 8px; padding: 6px 10px; font-weight: 800; font-size: 0.92rem; white-space: nowrap; }
+.item .two button.g[aria-pressed="true"] { border-color: var(--ok); background: var(--ok-bg); color: var(--ok); }
+.item .two button.b[aria-pressed="true"] { border-color: var(--warn); background: var(--warn-bg); color: var(--warn); }
+.item.is-g { border-color: #b9dcc4; }
+.item.is-b { border-color: #efc2b8; }
+.tally { display: flex; flex-wrap: wrap; gap: 8px 18px; font-weight: 800; }
+.tally .g { color: var(--ok); }
+.tally .b { color: var(--warn); }
+
+/* 5. 뉴스 카드 */
+.make { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 18px; align-items: start; }
+.news { background: var(--card); border: 3px solid var(--wc); border-radius: 16px; overflow: hidden; display: grid; min-width: 0; }
+.news-top { background: var(--studio); color: #fff; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 14px; }
+.news-top .live { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; letter-spacing: 0.06em; font-size: 0.9rem; }
+.news-top .live::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--onair); }
+.news-top .ch { font-size: 0.85rem; color: #c9d7e4; }
+.news-title { background: var(--wc); color: #fff; padding: 10px 14px; display: flex; align-items: baseline; gap: 10px; }
+.news-title .no { font-family: var(--font-display); font-size: 1.1rem; color: var(--cue); flex: none; }
+.news-title h3 { font-size: 1.35rem; min-width: 0; }
+.news canvas { width: 100%; aspect-ratio: 8 / 3; display: block; }
+.news-body { padding: 14px; display: grid; gap: 12px; }
+.news-season { font-weight: 600; }
+.news-season b { color: var(--wc); }
+.news-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.news-box { border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.news-box h4 { font-size: 1.05rem; }
+.news-box.g { background: var(--ok-bg); }
+.news-box.g h4 { color: var(--ok); }
+.news-box.b { background: var(--warn-bg); }
+.news-box.b h4 { color: var(--warn); }
+.news-box.p { background: var(--wc-bg); }
+.news-box.p h4 { color: var(--wc); }
+.news-box li { position: relative; padding-left: 14px; font-size: 0.95rem; line-height: 1.5; }
+.news-box li::before { content: ""; position: absolute; left: 2px; top: 0.6em; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: 0.55; }
+.news-box .empty { color: var(--ink-2); font-size: 0.9rem; padding-left: 0; }
+.news-box .empty::before { display: none; }
+.news-say { border-left: 6px solid var(--cue); background: #fffbea; border-radius: 0 10px 10px 0; padding: 10px 14px; font-weight: 600; }
+.news-say small { display: block; color: var(--ink-2); font-weight: 600; font-size: 0.85rem; margin-top: 4px; }
+.news-say.empty { color: var(--ink-2); font-weight: 400; }
+.sent { background: var(--ok-bg); color: var(--ok); border-radius: 10px; padding: 10px 14px; font-weight: 800; }
+.sent.err { background: var(--warn-bg); color: var(--warn); }
+
+/* 선생님 화면 */
+.t-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 10px; }
+.conn { font-weight: 800; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 8px; }
+.conn i { width: 10px; height: 10px; border-radius: 50%; background: #9aa8b5; }
+.conn.on i { background: var(--ok); }
+.conn.off i { background: var(--warn); }
+.slots { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.slot { border: 2px solid var(--wc); background: var(--wc-bg); border-radius: 12px; padding: 10px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.slot .sn { display: flex; align-items: center; gap: 8px; }
+.slot .sn span { flex: none; width: 30px; height: 30px; border-radius: 8px; background: var(--wc); color: #fff; display: grid; place-items: center; font-family: var(--font-display); }
+.slot .sn strong { font-size: 0.92rem; line-height: 1.3; }
+.slot .st { font-weight: 800; font-size: 0.95rem; }
+.slot .st.wait { color: var(--ink-2); }
+.slot .st.ing { color: var(--wc); }
+.slot .st.done { color: var(--ok); }
+.slot .acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.board-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
+.board { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 980px; font-size: 0.92rem; }
+.board th, .board td { border-bottom: 1px solid var(--line); vertical-align: top; text-align: left; padding: 8px 10px; }
+.board thead th { position: sticky; top: 0; background: var(--wc-bg); border-bottom: 3px solid var(--wc); font-weight: 800; min-width: 170px; }
+.board thead th .hn { display: flex; gap: 6px; align-items: center; }
+.board thead th .hn span { flex: none; width: 26px; height: 26px; border-radius: 7px; background: var(--wc); color: #fff; display: grid; place-items: center; font-family: var(--font-display); font-weight: 400; }
+.board thead th canvas { width: 100%; aspect-ratio: 8 / 3; border-radius: 6px; display: block; margin-top: 6px; }
+.board thead th:first-child { background: var(--card); border-bottom-color: var(--line); min-width: 116px; }
+.board tbody th { position: sticky; left: 0; background: var(--card); z-index: 1; font-weight: 800; white-space: nowrap; }
+.board tbody th button { border: 0; background: none; padding: 0; font-weight: 800; text-align: left; }
+.board tbody th button::after { content: " ▸"; color: var(--ink-2); font-size: 0.8em; }
+.board td li { position: relative; padding-left: 12px; line-height: 1.45; margin-bottom: 3px; }
+.board td li::before { content: ""; position: absolute; left: 1px; top: 0.6em; width: 5px; height: 5px; border-radius: 50%; background: var(--ink-2); opacity: 0.5; }
+.board td li.mine { color: var(--w2); font-weight: 600; }
+.board td .none { color: #9aa8b5; }
+.board tr.dim td, .board tr.dim th { opacity: 0.25; }
+.board tr.focus td, .board tr.focus th { background: #fffbea; }
+.board td.say { font-weight: 600; }
+.legend { font-size: 0.88rem; color: var(--ink-2); }
+.legend b { color: var(--w2); }
+.think { display: grid; gap: 10px; }
+.think li { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; font-weight: 600; display: flex; gap: 10px; align-items: baseline; }
+.think li .pair { flex: none; display: inline-flex; gap: 4px; }
+.think li .pair i { font-style: normal; width: 24px; height: 24px; border-radius: 6px; background: var(--wc); color: #fff; display: inline-grid; place-items: center; font-family: var(--font-display); font-size: 0.9rem; }
+.setup { background: #fffbea; border: 1px solid #f0dc8f; border-radius: 12px; padding: 14px 16px; display: grid; gap: 6px; }
+
+/* 발표 화면 */
+.present { position: fixed; inset: 0; z-index: 20; background: rgba(21, 38, 58, 0.92); display: grid; place-items: center; overflow-y: auto;
+  padding-block: calc(16px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.present-in { width: min(960px, 100%); display: grid; gap: 12px; }
+.present .news { font-size: 1.12em; }
+.present .news-title h3 { font-size: 1.8rem; }
+.present-bar { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.present-bar .btn { background: var(--card); }
+
+footer { border-top: 1px solid var(--line); padding-block: 14px 24px; }
+footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; align-items: center; font-size: 0.92rem; color: var(--ink-2); }
+footer a { color: var(--ink-2); font-weight: 600; }
+.linkbtn { border: 0; background: none; padding: 0; color: var(--ink-2); text-decoration: underline; font-weight: 600; font-size: 0.92rem; }
+
+@media (max-width: 860px) {
+  .draw, .look, .make { grid-template-columns: minmax(0, 1fr); }
+  .areas { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .slots { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 520px) {
+  body { font-size: 17px; }
+  .steps button { font-size: 0.72rem; }
+  .steps button b { font-size: 0.95rem; }
+  .news-cols { grid-template-columns: minmax(0, 1fr); }
+  .item { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .onair i { animation: none; }
+  .flip { transition: none; }
+  .chip.wrong { animation: none; }
+}
+</style>
+
+<header class="top bleed">
+  <div class="wrap">
+    <div class="brand">
+      <span class="eyebrow">5학년 과학 · 날씨와 우리 생활</span>
+      <h1>점곡 날씨 방송국</h1>
+      <p class="q">날씨는 우리 생활에 어떤 영향을 줄까요?</p>
+    </div>
+    <span class="onair"><i></i>방송 중</span>
+  </div>
+</header>
+
+<nav class="steps bleed" id="steps" aria-label="단계">
+  <ol>
+    <li><button type="button" data-go="1"><b>1</b>날씨 뽑기</button></li>
+    <li><button type="button" data-go="2"><b>2</b>날씨 살펴보기</button></li>
+    <li><button type="button" data-go="3"><b>3</b>생활 취재</button></li>
+    <li><button type="button" data-go="4"><b>4</b>좋은 점·불편한 점</button></li>
+    <li><button type="button" data-go="5"><b>5</b>뉴스 카드</button></li>
+  </ol>
+</nav>
+
+<div id="badge" class="badge" hidden>
+  <span class="no" id="badgeNo">1</span>
+  <span class="t"><small id="badgeSub">1번 날씨 기자</small><strong id="badgeName">날씨</strong></span>
+</div>
+
+<main class="wrap">
+
+  <!-- 1. 날씨 뽑기 -->
+  <section class="view" id="v1" data-view="1">
+    <div class="head">
+      <h2>1. 날씨 카드 뽑기</h2>
+      <p>카드 더미를 눌러 내가 맡을 날씨를 뽑아 봅시다. 다섯 명이 서로 다른 날씨를 하나씩 맡아 그 날씨의 기자가 됩니다.</p>
+    </div>
+    <div class="panel draw">
+      <div class="deck-area">
+        <button type="button" class="deck" id="deck" data-left="5" aria-label="날씨 카드 뒤집기">
+          <span class="flip" id="flip">
+            <span class="face back"><span><span class="mark">?</span><small>눌러서 뒤집기</small></span></span>
+            <span class="face front" id="front"></span>
+          </span>
+        </button>
+        <p class="left" id="left">남은 카드 <b>5</b>장</p>
+      </div>
+      <div style="display:grid; gap:14px; min-width:0">
+        <p class="reveal-msg" id="revealMsg" hidden></p>
+        <p id="drawGuide">카드를 뒤집으면 맡을 날씨가 나옵니다. 한 번 뽑은 날씨는 바꾸지 않고 끝까지 취재합니다.</p>
+        <p class="hint warn" id="drawErr" hidden></p>
+        <details class="pick-own" id="pickOwn">
+          <summary>선생님이 정해 준 날씨가 있나요?</summary>
+          <div class="own-list" id="ownList"></div>
+        </details>
+      </div>
+    </div>
+    <div class="nav">
+      <span class="msg" id="msg1"></span>
+      <button type="button" class="btn go" id="next1" disabled>취재 시작</button>
+    </div>
+  </section>
+
+  <!-- 2. 날씨 살펴보기 -->
+  <section class="view" id="v2" data-view="2" hidden>
+    <div class="head">
+      <h2>2. 날씨 살펴보기</h2>
+      <p>그림 속 우리 마을을 살펴봅시다. 깃발, 빨래, 나무, 굴뚝 연기가 어떻게 움직이는지도 보고, 이 날씨의 특징을 확인해 봅시다.</p>
+    </div>
+    <div class="look">
+      <div class="panel" style="padding:10px">
+        <canvas class="scene" id="scene" aria-label="날씨 그림"></canvas>
+      </div>
+      <div class="panel">
+        <h3>날씨 계기판</h3>
+        <div class="gauges" id="gauges"></div>
+        <p class="gnote">색이 칠해진 것이 이 날씨의 특징입니다. 빗금 친 것은 이 날씨 설명에 나오지 않습니다.</p>
+      </div>
+    </div>
+    <div class="panel">
+      <p class="ask">이런 날씨는 어느 계절에 자주 볼 수 있을까요? 생각나는 계절을 모두 골라 봅시다.</p>
+      <div class="chips" id="seasons"></div>
+      <p class="hint" id="seasonHint" hidden></p>
+    </div>
+    <div class="nav">
+      <button type="button" class="btn" data-prev>이전</button>
+      <span class="msg" id="msg2"></span>
+      <button type="button" class="btn go" data-next="2">생활 취재하러 가기</button>
+    </div>
+  </section>
+
+  <!-- 3. 생활 취재 -->
+  <section class="view" id="v3" data-view="3" hidden>
+    <div class="head">
+      <h2>3. 생활 취재하기</h2>
+      <p>이런 날씨에 우리 생활에는 어떤 일이 생길까요? 여섯 분야를 하나씩 눌러 취재해 봅시다. 알맞은 것을 모두 고르고, 내 생각도 더해 봅시다.</p>
+    </div>
+    <div class="areas" id="areaTabs" role="tablist" aria-label="생활 분야"></div>
+    <div class="panel" id="areaPanel" role="tabpanel">
+      <p class="ask" id="areaAsk"></p>
+      <div class="chips" id="areaChips"></div>
+      <p class="hint warn" id="areaWarn" hidden></p>
+      <div class="note">
+        <label for="areaNote">내 생각 더하기 (써도 되고 안 써도 됩니다)</label>
+        <input id="areaNote" type="text" maxlength="60" autocomplete="off" placeholder="내가 겪은 일이나 떠오르는 일을 써 봅시다">
+      </div>
+      <div class="nav">
+        <span class="count" id="areaCount"></span>
+        <button type="button" class="btn small" id="areaNext">다음 분야</button>
+      </div>
+    </div>
+    <div class="nav">
+      <button type="button" class="btn" data-prev>이전</button>
+      <span class="msg" id="msg3"></span>
+      <button type="button" class="btn go" data-next="3">나누러 가기</button>
+    </div>
+  </section>
+
+  <!-- 4. 좋은 점·불편한 점 -->
+  <section class="view" id="v4" data-view="4" hidden>
+    <div class="head">
+      <h2>4. 좋은 점과 불편한 점 나누기</h2>
+      <p>취재한 내용을 좋은 점과 불편한 점으로 나누어 봅시다. 사람마다 생각이 다를 수 있으니 내 생각대로 나눕니다.</p>
+    </div>
+    <div class="panel">
+      <div class="tally" id="tally"></div>
+      <div class="sorter" id="sorter"></div>
+    </div>
+    <div class="panel">
+      <p class="ask">불편한 점에 어떻게 대비하면 좋을까요? 알맞은 방법을 모두 골라 봅시다.</p>
+      <div class="chips" id="prepChips"></div>
+      <div class="note">
+        <label for="prepNote">내가 생각한 대비 방법 (써도 되고 안 써도 됩니다)</label>
+        <input id="prepNote" type="text" maxlength="60" autocomplete="off" placeholder="우리 집이나 학교에서 할 수 있는 방법을 써 봅시다">
+      </div>
+    </div>
+    <div class="nav">
+      <button type="button" class="btn" data-prev>이전</button>
+      <span class="msg" id="msg4"></span>
+      <button type="button" class="btn go" data-next="4">뉴스 카드 만들기</button>
+    </div>
+  </section>
+
+  <!-- 5. 뉴스 카드 -->
+  <section class="view" id="v5" data-view="5" hidden>
+    <div class="head">
+      <h2>5. 날씨 뉴스 카드 만들기</h2>
+      <p>내가 취재한 내용으로 뉴스 카드가 만들어졌습니다. 기자의 한마디를 쓰고 방송국으로 보내 봅시다. 보낸 카드는 선생님 화면에 모여 친구들 카드와 함께 비교합니다.</p>
+    </div>
+    <div class="make">
+      <div class="panel">
+        <div class="note">
+          <label for="comment" style="font-weight:800; color:var(--ink); font-size:1.05rem">기자의 한마디</label>
+          <textarea id="comment" rows="3" maxlength="80" placeholder="이런 날씨에 친구들에게 꼭 하고 싶은 말을 써 봅시다"></textarea>
+        </div>
+        <p class="hint">예를 들어 "이런 날에는 ○○ 해 봅시다."처럼 친구들에게 알려 주는 말로 써 봅시다.</p>
+        <button type="button" class="btn go" id="send">방송국으로 보내기</button>
+        <p class="sent" id="sent" hidden></p>
+      </div>
+      <div id="myCard"></div>
+    </div>
+    <div class="nav">
+      <button type="button" class="btn" data-prev>이전</button>
+      <span class="msg" id="msg5"></span>
+    </div>
+  </section>
+
+  <!-- 선생님 화면 -->
+  <section class="view" id="teacher" hidden>
+    <div class="t-head">
+      <div class="head">
+        <h2>선생님 화면</h2>
+        <p>아이들이 보낸 뉴스 카드가 5초마다 저절로 모입니다. 날씨 이름을 누르면 그 카드를 크게 띄웁니다.</p>
+      </div>
+      <span class="conn" id="conn"><i></i><span>연결 확인 중</span></span>
+    </div>
+    <div class="setup" id="setup" hidden>
+      <strong>아직 방송국 주소가 연결되지 않았습니다.</strong>
+      <p>구글 시트의 앱스 스크립트를 웹 앱으로 배포한 뒤, 그 주소를 이 파일의 <code>API_URL</code>에 넣어야 카드가 모입니다.</p>
+    </div>
+    <div class="slots" id="slots"></div>
+    <div class="panel" style="padding:12px 14px">
+      <p class="legend">줄 이름(계절, 옷차림 등)을 누르면 그 줄만 밝게 보여 날씨끼리 비교하기 좋습니다. <b>파란 글씨</b>는 아이가 직접 쓴 내용입니다.</p>
+    </div>
+    <div class="board-wrap">
+      <table class="board" id="board"></table>
+    </div>
+    <div class="panel">
+      <h3>함께 생각해 볼 질문</h3>
+      <ul class="think" id="think"></ul>
+    </div>
+    <div class="nav">
+      <span class="msg" id="tmsg"></span>
+      <button type="button" class="btn small" id="resetAll">처음 상태로 비우기</button>
+    </div>
+  </section>
+
+</main>
+
+<div class="present" id="present" hidden>
+  <div class="present-in">
+    <div class="present-bar">
+      <button type="button" class="btn" id="pPrev">이전 날씨</button>
+      <button type="button" class="btn" id="pClose">닫기</button>
+      <button type="button" class="btn" id="pNext">다음 날씨</button>
+    </div>
+    <div id="pCard"></div>
+  </div>
+</div>
+
+<footer class="bleed">
+  <div class="wrap">
+    <span id="footLeft">점곡초등학교 5학년 과학</span>
+    <span style="display:flex; gap:16px; flex-wrap:wrap">
+      <button type="button" class="linkbtn" id="restart">처음부터 다시 하기</button>
+      <a href="#teacher" id="toTeacher">선생님 화면</a>
+      <a href="#" id="toStudent" hidden>학생 화면으로</a>
+    </span>
+  </div>
+</footer>
+
+<script>
+(() => {
+'use strict';
+
+/* 구글 앱스 스크립트 웹 앱 주소. 비어 있으면 연결 없이 이 태블릿 안에서만 움직인다. */
+const API_URL = 'https://script.google.com/macros/s/AKfycbzK2RSPZITOUw-MCF0d-eJCc5Io_3cFRgwqf9AkbyDghtaTzL0sVfn95RNxf65AdRmzgQ/exec';
+const TEACHER_KEY = 'jeomgok-weather';
+const STORE = 'jg-weather-news-v1';
+
+const AREAS = [
+  { id: 'clothes', name: '옷차림', icon: '<path d="M8 3 3 6l2 4 3-1v12h8V9l3 1 2-4-5-3c-.6 1.6-2.1 2.6-4 2.6S8.6 4.6 8 3z"/>' },
+  { id: 'food', name: '음식', icon: '<path d="M3 11h18a9 9 0 0 1-18 0z"/><path d="M8 7c0-2 2-2 2-4M13 7c0-2 2-2 2-4"/>' },
+  { id: 'health', name: '건강', icon: '<path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/><path d="M9 11h6M12 8v6"/>' },
+  { id: 'play', name: '놀이·운동', icon: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c3.2 3 3.2 14 0 17M12 3.5c-3.2 3-3.2 14 0 17"/>' },
+  { id: 'work', name: '집안일·농사', icon: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/>' },
+  { id: 'safety', name: '안전', icon: '<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/>' }
+];
+
+const SEASONS = ['봄', '초여름(장마철)', '여름', '가을', '겨울'];
+
+/* 날씨 자료. t: 보기 글, x: 알맞지 않은 보기일 때 다시 생각할 거리 */
+const W = [
+  {
+    n: 1, name: '기온이 높고 습도가 높은 날씨', short: '덥고 습한 날',
+    g: { temp: 'high', hum: 'high' },
+    seasonHint: '여름에는 남동쪽 바다에서 오는 <b>덥고 습한 공기 덩어리</b>가 우리나라에 영향을 줍니다. 그래서 여름에는 기온과 습도가 함께 높은 날이 많습니다.',
+    areas: {
+      clothes: [
+        { t: '땀에 젖은 옷이 몸에 달라붙어요' },
+        { t: '얇은 반팔 옷 하나만 입어도 돼요' },
+        { t: '땀에 젖은 옷이 잘 마르지 않아요' },
+        { t: '두꺼운 외투와 목도리가 필요해요', x: '기온이 높은 날입니다. 두꺼운 옷은 추운 날에 필요합니다.' }
+      ],
+      food: [
+        { t: '음식이 쉽게 상해요' },
+        { t: '시원한 수박과 냉면이 맛있어요' },
+        { t: '얼음물과 시원한 음료를 자주 찾아요' },
+        { t: '음식을 밖에 오래 두어도 괜찮아요', x: '기온과 습도가 높으면 세균이 잘 자라서 음식이 쉽게 상합니다.' }
+      ],
+      health: [
+        { t: '실제보다 더 덥게 느껴져 짜증이 나기 쉬워요' },
+        { t: '더위를 먹거나 열사병에 걸릴 수 있어요' },
+        { t: '세균이 잘 자라 배탈이 나기 쉬워요' },
+        { t: '피부와 입술이 쉽게 갈라져요', x: '피부가 쉽게 건조해지는 것은 습도가 낮을 때입니다.' }
+      ],
+      play: [
+        { t: '물놀이와 계곡 놀이를 하기 좋아요' },
+        { t: '운동장에서 조금만 뛰어도 쉽게 지쳐요' },
+        { t: '한낮에는 밖에서 놀기 힘들어요' },
+        { t: '얼음 썰매를 타기 좋아요', x: '물이 얼음으로 어는 것은 기온이 아주 낮을 때입니다.' }
+      ],
+      work: [
+        { t: '빨래가 잘 마르지 않아요' },
+        { t: '집 안에 곰팡이가 잘 피어요' },
+        { t: '벼와 과일이 햇볕과 열을 받아 쑥쑥 자라요' },
+        { t: '빨래가 금방 바싹 말라요', x: '습도가 높으면 물이 잘 증발하지 않아서 빨래가 잘 마르지 않습니다.' }
+      ],
+      safety: [
+        { t: '한낮에 오래 밖에 있으면 위험해요' },
+        { t: '모기와 벌레가 많아져요' },
+        { t: '에어컨을 많이 틀어 전기를 많이 써요' },
+        { t: '길이 얼어서 미끄러워요', x: '길이 어는 것은 기온이 낮을 때입니다.' }
+      ]
+    },
+    prep: ['에어컨이나 제습기로 습도를 낮춰요', '물을 자주 마셔요', '한낮에는 그늘이나 실내에서 쉬어요', '남은 음식은 바로 냉장고에 넣어요', '방에 마른 숯을 놓아 습기를 줄여요', '요리할 때 환기팬을 틀어요']
+  },
+  {
+    n: 2, name: '기온이 낮고 바람이 많이 부는 날씨', short: '춥고 바람 부는 날',
+    g: { temp: 'low', wind: 'high' },
+    seasonHint: '겨울에는 북서쪽 대륙에서 오는 <b>춥고 건조한 공기 덩어리</b>가 우리나라에 영향을 줍니다. 그래서 겨울에는 기온이 낮고 찬 바람이 많이 붑니다.',
+    areas: {
+      clothes: [
+        { t: '두꺼운 외투, 목도리, 장갑이 필요해요' },
+        { t: '바람이 옷 속으로 들어와 더 추워요' },
+        { t: '옷을 여러 겹 껴입어 움직이기 불편해요' },
+        { t: '반팔 옷만 입어도 따뜻해요', x: '기온이 낮고 바람까지 붑니다. 몸을 따뜻하게 감싸야 합니다.' }
+      ],
+      food: [
+        { t: '따뜻한 국물과 군고구마가 맛있어요' },
+        { t: '음식이 쉽게 상하지 않아요' },
+        { t: '따뜻한 차나 물을 자주 찾아요' },
+        { t: '음식이 금방 쉬어서 상해요', x: '음식이 쉽게 상하는 것은 기온과 습도가 높은 날입니다.' }
+      ],
+      health: [
+        { t: '감기에 걸리기 쉬워요' },
+        { t: '바람 때문에 실제 기온보다 더 춥게 느껴져요' },
+        { t: '손과 귀가 꽁꽁 얼어 아파요' },
+        { t: '땀띠가 나기 쉬워요', x: '땀띠는 덥고 땀이 많이 나는 날에 생깁니다.' }
+      ],
+      play: [
+        { t: '바람을 타고 연날리기를 하기 좋아요' },
+        { t: '밖에서 오래 놀기 어려워요' },
+        { t: '꽁꽁 언 논에서 얼음 썰매를 탈 수 있어요' },
+        { t: '계곡에서 물놀이를 하기 좋아요', x: '물놀이는 기온이 높은 날에 하기 좋습니다.' }
+      ],
+      work: [
+        { t: '수도관이 얼어 터질 수 있어요' },
+        { t: '난방을 많이 해서 연료와 전기를 많이 써요' },
+        { t: '비닐하우스가 바람에 찢어지지 않게 살펴야 해요' },
+        { t: '밭의 곡식이 쑥쑥 자라요', x: '기온이 낮으면 대부분의 식물은 잘 자라지 못합니다.' }
+      ],
+      safety: [
+        { t: '길이 얼어 미끄러워요' },
+        { t: '간판이나 물건이 바람에 날아갈 수 있어요' },
+        { t: '난로를 쓰다가 불이 날 수 있어요' },
+        { t: '열사병에 걸리기 쉬워요', x: '열사병은 아주 더운 날 조심해야 합니다.' }
+      ]
+    },
+    prep: ['옷을 여러 겹 입고 목도리와 장갑을 해요', '수도관을 헌 옷이나 보온재로 감싸요', '날아갈 만한 물건은 단단히 묶어 둬요', '얼음길에서는 주머니에서 손을 빼고 천천히 걸어요', '손을 자주 씻고 실내 공기를 바꿔 줘요', '마늘밭에 비닐을 덮어 추위를 막아요']
+  },
+  {
+    n: 3, name: '구름의 양이 적고 비가 내리지 않는 날씨', short: '맑은 날',
+    g: { cloud: 'low', rain: 'none' },
+    seasonHint: '맑은 날은 어느 계절에나 있습니다. 봄과 가을에는 남서쪽에서 오는 <b>따뜻하고 건조한 공기 덩어리</b>가 영향을 주어 맑은 날이 많습니다.',
+    areas: {
+      clothes: [
+        { t: '우산 없이 가볍게 나갈 수 있어요' },
+        { t: '햇볕이 강해 모자가 있으면 좋아요' },
+        { t: '옷과 신발이 젖지 않아요' },
+        { t: '우비와 장화를 꼭 챙겨야 해요', x: '비가 내리지 않는 날입니다.' }
+      ],
+      food: [
+        { t: '도시락을 들고 밖에서 먹기 좋아요' },
+        { t: '고추와 곶감을 햇볕에 말리기 좋아요' },
+        { t: '목이 말라 물을 자주 마시게 돼요' },
+        { t: '비 때문에 소풍 도시락을 교실에서 먹어요', x: '비가 내리지 않으니 밖에서 먹을 수 있습니다.' }
+      ],
+      health: [
+        { t: '햇볕을 많이 받으면 피부가 탈 수 있어요' },
+        { t: '햇볕을 쬐며 걸으면 기분이 좋아져요' },
+        { t: '밤에는 기온이 많이 내려가 쌀쌀할 수 있어요' },
+        { t: '비에 젖어 감기에 걸려요', x: '비가 내리지 않는 날입니다.' }
+      ],
+      play: [
+        { t: '운동장 체육과 소풍을 하기 좋아요' },
+        { t: '밤하늘의 별과 달을 관찰하기 좋아요' },
+        { t: '운동회 같은 바깥 행사를 열기 좋아요' },
+        { t: '비 때문에 체육을 강당에서 해요', x: '비가 내리지 않는 날입니다.' }
+      ],
+      work: [
+        { t: '빨래가 잘 말라요' },
+        { t: '사과가 햇볕을 받아 빨갛게 잘 익어요' },
+        { t: '비가 오래 안 오면 논밭이 말라요(가뭄)' },
+        { t: '논과 밭에 물이 넘쳐요', x: '논밭에 물이 넘치는 것은 비가 많이 내릴 때입니다.' }
+      ],
+      safety: [
+        { t: '비가 오래 안 오면 산불이 나기 쉬워요' },
+        { t: '한낮 햇볕 아래 오래 있으면 더위를 먹을 수 있어요' },
+        { t: '길이 미끄럽지 않아 다니기 편해요' },
+        { t: '개울물이 불어나 위험해요', x: '개울물이 불어나는 것은 비가 많이 내릴 때입니다.' }
+      ]
+    },
+    prep: ['모자를 쓰고 햇볕 차단제를 발라요', '물을 챙겨 자주 마셔요', '그늘에서 쉬어 가며 놀아요', '비가 오래 안 오면 물을 아껴 써요', '산이나 들에서 불을 피우지 않아요', '가뭄 때는 논밭에 물을 대 줘요']
+  },
+  {
+    n: 4, name: '바람이 많이 불고 습도가 낮은 날씨', short: '바람 불고 건조한 날',
+    g: { wind: 'high', hum: 'low' },
+    seasonHint: '봄과 가을에는 <b>따뜻하고 건조한 공기 덩어리</b>가, 겨울에는 <b>춥고 건조한 공기 덩어리</b>가 영향을 줍니다. 특히 봄에는 공기가 건조하고 바람이 많이 불어 산불을 조심해야 합니다.',
+    areas: {
+      clothes: [
+        { t: '정전기 때문에 옷이 따끔하고 머리카락이 달라붙어요' },
+        { t: '바람에 모자가 날아가요' },
+        { t: '바람을 막아 주는 겉옷이 있으면 좋아요' },
+        { t: '땀에 젖은 옷이 잘 마르지 않아요', x: '습도가 낮으면 물이 잘 증발해서 옷이 금방 마릅니다.' }
+      ],
+      food: [
+        { t: '목이 자주 말라 물을 많이 마셔요' },
+        { t: '곶감이나 시래기를 말리기 좋아요' },
+        { t: '음식에 곰팡이가 잘 피지 않아요' },
+        { t: '음식에 곰팡이가 금방 피어요', x: '곰팡이는 습도가 높을 때 잘 자랍니다.' }
+      ],
+      health: [
+        { t: '피부와 입술이 쉽게 건조해져요' },
+        { t: '목이 따갑고 감기 같은 호흡기 질환에 걸리기 쉬워요' },
+        { t: '먼지가 날려 눈이 따가워요' },
+        { t: '실제보다 더 덥고 끈적하게 느껴져요', x: '끈적하게 느껴지는 것은 습도가 높을 때입니다.' }
+      ],
+      play: [
+        { t: '연날리기와 바람개비 놀이를 하기 좋아요' },
+        { t: '흙먼지가 날려 운동장 놀이가 힘들어요' },
+        { t: '공이 바람에 밀려 공놀이가 어려워요' },
+        { t: '물웅덩이에서 첨벙첨벙 놀아요', x: '습도가 낮고 바람이 부는 날에는 땅이 금방 마릅니다.' }
+      ],
+      work: [
+        { t: '빨래가 잘 말라요' },
+        { t: '밭의 흙이 말라 작물에 물을 더 줘야 해요' },
+        { t: '비닐이나 농사 도구가 바람에 날아갈 수 있어요' },
+        { t: '집 안에 곰팡이가 잘 피어요', x: '곰팡이는 습도가 높을 때 잘 핍니다.' }
+      ],
+      safety: [
+        { t: '작은 불씨도 큰 산불이 되기 쉬워요' },
+        { t: '불이 바람을 타고 빠르게 번져요' },
+        { t: '간판이나 나뭇가지가 바람에 떨어질 수 있어요' },
+        { t: '빗길에 미끄러지기 쉬워요', x: '빗길은 비가 내리는 날 조심해야 합니다.' }
+      ]
+    },
+    prep: ['가습기를 틀거나 젖은 빨래를 널어 습도를 높여요', '물을 자주 마시고 로션을 발라요', '먼지가 많을 때는 마스크를 써요', '산에서 불을 피우거나 논밭을 태우지 않아요', '날아갈 만한 물건은 단단히 묶어 둬요', '물을 끓여 방 안 습도를 높여요']
+  },
+  {
+    n: 5, name: '구름의 양이 많고 비가 내리는 날씨', short: '비 오는 날',
+    g: { cloud: 'high', rain: 'yes' },
+    seasonHint: '초여름에는 많은 비가 한동안 집중해서 내리는 <b>장마</b>가 있습니다. 여름에도 비가 많이 내립니다. 비는 다른 계절에도 내립니다.',
+    areas: {
+      clothes: [
+        { t: '우산과 우비, 장화를 챙겨야 해요' },
+        { t: '신발과 양말이 젖기 쉬워요' },
+        { t: '젖은 옷 때문에 몸이 으슬으슬해요' },
+        { t: '모자와 선글라스로 햇볕을 가려요', x: '구름이 많아 햇볕이 거의 들지 않습니다.' }
+      ],
+      food: [
+        { t: '따뜻한 국물이나 부침개가 생각나요' },
+        { t: '습기 때문에 과자가 쉽게 눅눅해져요' },
+        { t: '습해서 음식이 쉽게 상해요' },
+        { t: '고추를 마당에 널어 말리기 좋아요', x: '비가 오면 널어 둔 것이 모두 젖습니다.' }
+      ],
+      health: [
+        { t: '습도가 높아 곰팡이와 세균이 잘 자라요' },
+        { t: '비에 젖으면 몸이 차가워져 감기에 걸릴 수 있어요' },
+        { t: '날이 흐려 기분이 가라앉을 수 있어요' },
+        { t: '햇볕에 피부가 까맣게 타요', x: '구름이 많아 햇볕이 약합니다.' }
+      ],
+      play: [
+        { t: '운동장 대신 교실이나 강당에서 놀아요' },
+        { t: '빗소리를 들으며 책 읽기 좋아요' },
+        { t: '비가 그친 뒤 물웅덩이에서 놀 수 있어요' },
+        { t: '밤하늘의 별을 관찰하기 좋아요', x: '구름이 많으면 별이 가려 보이지 않습니다.' }
+      ],
+      work: [
+        { t: '빨래가 잘 마르지 않아요' },
+        { t: '논과 저수지에 물이 채워져요' },
+        { t: '비가 너무 많이 오면 농작물이 물에 잠겨요' },
+        { t: '논바닥이 쩍쩍 갈라져요', x: '논바닥이 갈라지는 것은 비가 오래 내리지 않을 때입니다.' }
+      ],
+      safety: [
+        { t: '길이 미끄럽고 앞이 잘 안 보여요' },
+        { t: '비가 많이 오면 홍수나 산사태가 날 수 있어요' },
+        { t: '개울과 계곡 물이 갑자기 불어나요' },
+        { t: '작은 불씨가 큰 산불이 돼요', x: '비가 오면 산과 들이 젖어 불이 잘 번지지 않습니다.' }
+      ]
+    },
+    prep: ['우산과 우비, 장화를 챙겨요', '제습기나 에어컨으로 습도를 낮춰요', '비가 많이 오면 개울과 계곡에 가까이 가지 않아요', '미끄러운 길에서는 뛰지 않고 천천히 걸어요', '집 둘레 물길이 막히지 않았는지 살펴요', '비 오는 날 할 실내 놀이를 준비해요']
+  }
+];
+
+const GAUGES = [
+  { k: 'temp', name: '기온', lo: '낮음', hi: '높음' },
+  { k: 'hum', name: '습도', lo: '낮음', hi: '높음' },
+  { k: 'wind', name: '바람', lo: '약함', hi: '강함' },
+  { k: 'cloud', name: '구름의 양', lo: '적음', hi: '많음' },
+  { k: 'rain', name: '비', lo: '안 옴', hi: '옴' }
+];
+
+const THINK = [
+  { p: [2, 4], q: '2번과 4번은 둘 다 바람이 많이 붑니다. 생활에 주는 영향 가운데 같은 것과 다른 것은 무엇일까요?' },
+  { p: [1, 4], q: '1번은 습도가 높고 4번은 습도가 낮습니다. 빨래, 곰팡이, 피부는 각각 어떻게 달라질까요?' },
+  { p: [3, 5], q: '3번과 5번은 구름과 비가 반대입니다. 농사에는 각각 어떤 도움과 피해를 줄까요?' },
+  { p: [1, 2], q: '1번과 2번은 기온이 반대입니다. 옷차림과 음식은 어떻게 달라질까요?' },
+  { p: [], q: '날씨에 따라 우리 생활은 어떻게 달라질까요? 오늘 배운 내용을 한 문장으로 정리해 봅시다.' }
+];
+
+/* ───────── 작은 도구 ───────── */
+const $ = (s, r = document) => r.querySelector(s);
+const el = (tag, attrs = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k === 'class') e.className = v;
+    else if (k === 'text') e.textContent = v;
+    else if (k === 'html') e.innerHTML = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of kids.flat()) if (c != null) e.append(c);
+  return e;
+};
+const rid = () => 'd' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const wOf = n => W[n - 1];
+
+function load() {
+  try { const s = JSON.parse(localStorage.getItem(STORE)); if (s && s.device) return s; } catch (e) {}
+  return null;
+}
+function fresh(device) {
+  return { device: device || rid(), n: 0, step: 1, max: 1, seasons: [], picks: {}, notes: {}, sort: {}, prep: [], prepNote: '', comment: '', sentAt: 0, area: 'clothes' };
+}
+let S = load() || fresh();
+function save() { try { localStorage.setItem(STORE, JSON.stringify(S)); } catch (e) {} }
+
+/* ───────── 방송국(구글 시트) 연결 ───────── */
+async function apiGet(params) {
+  const q = new URLSearchParams(params).toString();
+  const r = await fetch(API_URL + '?' + q, { method: 'GET', redirect: 'follow', cache: 'no-store' });
+  if (!r.ok) throw new Error('http ' + r.status);
+  return r.json();
+}
+async function apiPost(body) {
+  const opts = { method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) };
+  try {
+    const r = await fetch(API_URL, opts);
+    return await r.json();
+  } catch (e) {
+    /* 응답을 못 읽어도 저장은 됐을 수 있으니, 한 번 더 보내고 상태로 확인한다 */
+    await fetch(API_URL, Object.assign({}, opts, { mode: 'no-cors' }));
+    const st = await apiGet({ action: 'state' });
+    const slot = st.slots && st.slots[body.n - 1];
+    if (slot && slot.device === body.device && slot.stage >= (body.card ? body.card.stage : 0)) return { ok: true };
+    throw e;
+  }
+}
+
+/* ───────── 날씨 그림 ───────── */
+const SCENE = {
+  1: { sky: ['#f0ad62', '#fbe4b9'], hill: ['#6f9a4a', '#567f38'], ground: '#7ea553', sun: 'hot', clouds: [[120, 60, 1, 6], [380, 44, 0.8, 4]], cloudCol: '#fff8ec', wind: 0.12, tree: 'apple-green', heat: true, haze: 'rgba(255,230,190,0.22)', laundry: 'drip' },
+  2: { sky: ['#9dbdd8', '#dfe9f1'], hill: ['#9b9b8a', '#7f816e'], ground: '#a8a590', sun: 'pale', clouds: [[200, 50, 0.8, 70], [560, 70, 0.6, 90]], cloudCol: '#f2f6f9', wind: 1, tree: 'bare', streaks: true, leaves: '#9a6b3a', smoke: true, frost: true, haze: 'rgba(225,238,255,0.14)', laundry: 'flap' },
+  3: { sky: ['#3d95df', '#c3e4f8'], hill: ['#78a64d', '#5d8d3c'], ground: '#8db55e', sun: 'bright', clouds: [[300, 52, 0.45, 8]], cloudCol: '#ffffff', wind: 0.22, tree: 'apple-red', laundry: 'sway' },
+  4: { sky: ['#a6c0d4', '#efe0bb'], hill: ['#b3a76a', '#9c8f52'], ground: '#c6b37b', sun: 'pale', clouds: [[480, 40, 0.5, 80]], cloudCol: '#f7f1e3', wind: 1, tree: 'blossom', streaks: true, dust: true, leaves: '#c79a4a', smoke: true, laundry: 'flap' },
+  5: { sky: ['#6b7683', '#a8b1bb'], hill: ['#587759', '#456444'], ground: '#5f7e58', sun: null, clouds: [[60, 40, 1.2, 14], [250, 30, 1.4, 12], [440, 46, 1.2, 16], [620, 32, 1.3, 13], [760, 50, 1.1, 15], [-80, 58, 1, 14]], cloudCol: '#8a929c', cloudCol2: '#737c87', wind: 0.3, tree: 'green', rain: true, puddles: true, laundry: 'none' }
+};
+
+function fitCanvas(cv) {
+  const cw = cv.clientWidth;
+  if (!cw) return false;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = Math.round(cw * dpr), h = Math.round(w * 3 / 8);
+  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+  return true;
+}
+
+function drawScene(cv, n, t) {
+  if (!fitCanvas(cv)) return;
+  const P = SCENE[n]; const c = cv.getContext('2d');
+  const k = cv.width / 800;
+  c.setTransform(k, 0, 0, k, 0, 0);
+  c.clearRect(0, 0, 800, 300);
+  const wind = P.wind;
+
+  /* 하늘 */
+  let g = c.createLinearGradient(0, 0, 0, 240);
+  g.addColorStop(0, P.sky[0]); g.addColorStop(1, P.sky[1]);
+  c.fillStyle = g; c.fillRect(0, 0, 800, 300);
+
+  /* 해 */
+  if (P.sun) {
+    const sx = 690, sy = 62;
+    if (P.sun === 'hot') {
+      const pulse = 1 + Math.sin(t * 2) * 0.06;
+      const rg = c.createRadialGradient(sx, sy, 10, sx, sy, 110 * pulse);
+      rg.addColorStop(0, 'rgba(255,214,120,0.95)'); rg.addColorStop(1, 'rgba(255,190,90,0)');
+      c.fillStyle = rg; c.beginPath(); c.arc(sx, sy, 110 * pulse, 0, 7); c.fill();
+      c.fillStyle = '#ffb43a'; c.beginPath(); c.arc(sx, sy, 40, 0, 7); c.fill();
+    } else if (P.sun === 'bright') {
+      c.save(); c.translate(sx, sy); c.rotate(t * 0.15);
+      c.strokeStyle = 'rgba(255,236,140,0.9)'; c.lineWidth = 5; c.lineCap = 'round';
+      for (let i = 0; i < 12; i++) { c.rotate(Math.PI / 6); c.beginPath(); c.moveTo(48, 0); c.lineTo(64, 0); c.stroke(); }
+      c.restore();
+      c.fillStyle = '#ffd43b'; c.beginPath(); c.arc(sx, sy, 36, 0, 7); c.fill();
+    } else {
+      c.fillStyle = 'rgba(255,249,222,0.85)'; c.beginPath(); c.arc(sx, sy, 28, 0, 7); c.fill();
+    }
+  }
+
+  /* 구름 */
+  P.clouds.forEach((cl, i) => {
+    const [bx, y, s, sp] = cl;
+    const x = ((bx + t * sp) % 1000 + 1000) % 1000 - 150;
+    c.fillStyle = (P.cloudCol2 && i % 2) ? P.cloudCol2 : P.cloudCol;
+    c.beginPath();
+    [[0, 0, 26], [28, -14, 32], [62, -4, 28], [90, 6, 22], [44, 10, 26], [14, 12, 20]].forEach(([dx, dy, r]) => {
+      c.moveTo(x + dx * s + r * s, y + dy * s); c.arc(x + dx * s, y + dy * s, r * s, 0, 7);
+    });
+    c.fill();
+  });
+
+  /* 산 */
+  c.fillStyle = P.hill[0];
+  c.beginPath(); c.moveTo(0, 300); c.lineTo(0, 168);
+  c.bezierCurveTo(90, 110, 170, 120, 250, 150); c.bezierCurveTo(330, 175, 400, 100, 520, 118);
+  c.bezierCurveTo(620, 132, 700, 150, 800, 128); c.lineTo(800, 300); c.fill();
+  c.fillStyle = P.hill[1];
+  c.beginPath(); c.moveTo(0, 300); c.lineTo(0, 210);
+  c.bezierCurveTo(120, 178, 260, 196, 360, 206); c.bezierCurveTo(470, 216, 600, 180, 800, 198); c.lineTo(800, 300); c.fill();
+  c.fillStyle = P.ground; c.fillRect(0, 236, 800, 64);
+
+  if (P.haze) { c.fillStyle = P.haze; c.fillRect(0, 0, 800, 236); }
+
+  /* 연기 */
+  const smoke = (x, y) => {
+    if (!P.smoke) return;
+    for (let i = 0; i < 6; i++) {
+      const p = ((t * 0.45 + i / 6) % 1);
+      const px = x + p * (16 + wind * 150), py = y - p * (70 - wind * 52);
+      c.fillStyle = 'rgba(235,238,242,' + (0.55 * (1 - p)).toFixed(3) + ')';
+      c.beginPath(); c.arc(px, py, 4 + p * 11, 0, 7); c.fill();
+    }
+  };
+
+  /* 집 */
+  const house = (x, w, wall, roof) => {
+    const y = 236, h = 38;
+    c.fillStyle = '#6b4a35'; c.fillRect(x + w - 20, y - h - 22, 9, 18);
+    smoke(x + w - 15, y - h - 24);
+    c.fillStyle = wall; c.fillRect(x, y - h, w, h);
+    c.fillStyle = roof; c.beginPath(); c.moveTo(x - 8, y - h); c.lineTo(x + w / 2, y - h - 24); c.lineTo(x + w + 8, y - h); c.fill();
+    if (P.frost) { c.strokeStyle = '#ffffff'; c.lineWidth = 3; c.beginPath(); c.moveTo(x - 8, y - h); c.lineTo(x + w / 2, y - h - 24); c.lineTo(x + w + 8, y - h); c.stroke(); }
+    c.fillStyle = '#8fc0e6'; c.fillRect(x + 10, y - h + 10, 14, 12);
+    c.fillStyle = '#7a5640'; c.fillRect(x + w - 26, y - 22, 12, 22);
+  };
+  house(66, 74, '#f3ead9', '#b4583c');
+  house(162, 66, '#efe6d6', '#4e6f8e');
+
+  /* 빨랫줄 */
+  {
+    c.strokeStyle = '#6d5a49'; c.lineWidth = 3;
+    c.beginPath(); c.moveTo(252, 236); c.lineTo(252, 196); c.moveTo(326, 236); c.lineTo(326, 196); c.stroke();
+    c.lineWidth = 1.5; c.beginPath(); c.moveTo(252, 198); c.quadraticCurveTo(289, 206, 326, 198); c.stroke();
+    if (P.laundry !== 'none') {
+      const cols = ['#e46a5a', '#f2c84b', '#5c9bd6'];
+      [266, 289, 312].forEach((x, i) => {
+        let a = 0;
+        if (P.laundry === 'flap') a = -1.15 + Math.sin(t * 9 + i * 1.7) * 0.18;
+        else if (P.laundry === 'sway') a = -0.18 + Math.sin(t * 2.2 + i) * 0.1;
+        else a = Math.sin(t * 0.8 + i) * 0.03;
+        c.save(); c.translate(x, 202); c.rotate(a);
+        c.fillStyle = cols[i];
+        c.beginPath(); c.moveTo(-9, 0); c.lineTo(9, 0); c.lineTo(12, 6); c.lineTo(8, 8); c.lineTo(8, 24); c.lineTo(-8, 24); c.lineTo(-8, 8); c.lineTo(-12, 6); c.closePath(); c.fill();
+        if (P.laundry === 'drip') {
+          const d = (t * 0.9 + i * 0.37) % 1;
+          c.fillStyle = 'rgba(90,150,210,0.9)'; c.beginPath(); c.arc(0, 26 + d * 14, 2, 0, 7); c.fill();
+        }
+        c.restore();
+      });
+    }
+  }
+
+  /* 나무 */
+  const tree = (x, s, ph) => {
+    const lean = wind * 0.16 + Math.sin(t * (1.4 + wind * 4) + ph) * 0.025 * (0.3 + wind * 1.6);
+    c.save(); c.translate(x, 238); c.rotate(lean); c.scale(s, s);
+    c.fillStyle = '#6b4a32'; c.fillRect(-4, -40, 8, 40);
+    const kind = P.tree;
+    if (kind === 'bare') {
+      c.strokeStyle = '#6b4a32'; c.lineWidth = 3; c.lineCap = 'round';
+      c.beginPath(); c.moveTo(0, -36); c.lineTo(-18, -62); c.moveTo(0, -40); c.lineTo(16, -66); c.moveTo(0, -42); c.lineTo(2, -76);
+      c.moveTo(-10, -50); c.lineTo(-24, -54); c.moveTo(9, -54); c.lineTo(24, -58); c.stroke();
+    } else {
+      const crown = { 'apple-green': '#4f8d36', 'apple-red': '#4c8a35', blossom: '#a4ad6a', green: '#3f7a3c' }[kind] || '#4f8d36';
+      c.fillStyle = crown;
+      c.beginPath(); c.arc(0, -56, 26, 0, 7); c.arc(-16, -46, 18, 0, 7); c.arc(16, -46, 18, 0, 7); c.fill();
+      const dots = { 'apple-green': '#b9d36a', 'apple-red': '#d8392b', blossom: '#f5c8d6' }[kind];
+      if (dots) {
+        c.fillStyle = dots;
+        [[-12, -58], [8, -66], [14, -48], [-20, -44], [0, -46], [-4, -70], [20, -58]].forEach(([dx, dy]) => { c.beginPath(); c.arc(dx, dy, kind === 'blossom' ? 3 : 4, 0, 7); c.fill(); });
+      }
+    }
+    c.restore();
+  };
+  tree(354, 1, 0.3); tree(404, 0.85, 1.2);
+
+  /* 학교와 깃발 */
+  c.fillStyle = '#f4efe6'; c.fillRect(462, 172, 176, 64);
+  c.fillStyle = '#c4553b'; c.fillRect(456, 164, 188, 10);
+  c.fillStyle = '#f4efe6'; c.fillRect(530, 146, 40, 26);
+  c.fillStyle = '#c4553b'; c.beginPath(); c.moveTo(524, 148); c.lineTo(550, 132); c.lineTo(576, 148); c.fill();
+  if (P.frost) { c.fillStyle = '#ffffff'; c.fillRect(456, 162, 188, 4); }
+  c.fillStyle = '#ffffff'; c.beginPath(); c.arc(550, 158, 6, 0, 7); c.fill();
+  c.strokeStyle = '#7a8a99'; c.lineWidth = 1; c.beginPath(); c.moveTo(550, 158); c.lineTo(550, 154); c.moveTo(550, 158); c.lineTo(553, 158); c.stroke();
+  c.fillStyle = '#8fc0e6';
+  for (let r = 0; r < 2; r++) for (let i = 0; i < 6; i++) { if (r === 1 && (i === 2 || i === 3)) continue; c.fillRect(474 + i * 26, 182 + r * 26, 16, 14); }
+  c.fillStyle = '#7a5640'; c.fillRect(538, 210, 24, 26);
+  c.strokeStyle = '#8b97a3'; c.lineWidth = 3; c.beginPath(); c.moveTo(666, 236); c.lineTo(666, 112); c.stroke();
+  c.save(); c.translate(666, 114);
+  const droop = P.rain ? 1.3 : (1 - Math.min(1, wind * 1.1)) * 1.25;
+  c.rotate(droop);
+  const amp = 1.5 + wind * 4.5, fl = 46, fh = 28;
+  c.fillStyle = '#2f6fb0';
+  c.beginPath(); c.moveTo(0, 0);
+  for (let j = 0; j <= 10; j++) { const x = fl * j / 10; c.lineTo(x, Math.sin(t * (3 + wind * 7) - j * 0.7) * amp * j / 10); }
+  for (let j = 10; j >= 0; j--) { const x = fl * j / 10; c.lineTo(x, fh + Math.sin(t * (3 + wind * 7) - j * 0.7) * amp * j / 10); }
+  c.closePath(); c.fill();
+  c.fillStyle = '#ffd23f'; c.beginPath(); c.arc(fl * 0.45, fh / 2 + Math.sin(t * (3 + wind * 7) - 3) * amp * 0.45, 7, 0, 7); c.fill();
+  c.restore();
+
+  tree(714, 1, 2.2); tree(764, 0.9, 0.7); tree(28, 0.95, 1.7);
+
+  /* 물웅덩이 */
+  if (P.puddles) {
+    [[300, 268, 40], [560, 262, 34], [130, 282, 30]].forEach(([x, y, r], i) => {
+      c.fillStyle = 'rgba(150,170,190,0.75)'; c.beginPath(); c.ellipse(x, y, r, 6, 0, 0, 7); c.fill();
+      for (let q = 0; q < 2; q++) {
+        const p = (t * 0.8 + q * 0.5 + i * 0.3) % 1;
+        c.strokeStyle = 'rgba(255,255,255,' + (0.7 * (1 - p)).toFixed(3) + ')'; c.lineWidth = 1.2;
+        c.beginPath(); c.ellipse(x + (q ? 10 : -8), y, 3 + p * 16, 1 + p * 3, 0, 0, 7); c.stroke();
+      }
+    });
+  }
+
+  /* 아지랑이 */
+  if (P.heat) {
+    c.strokeStyle = 'rgba(255,255,255,0.35)'; c.lineWidth = 2;
+    for (let i = 0; i < 5; i++) {
+      const y = 236 - ((t * 18 + i * 14) % 70);
+      c.beginPath();
+      for (let x = 0; x <= 800; x += 20) c.lineTo(x, y + Math.sin(x / 40 + t * 3 + i) * 3);
+      c.stroke();
+    }
+  }
+
+  /* 바람 줄 */
+  if (P.streaks) {
+    c.strokeStyle = 'rgba(255,255,255,0.6)'; c.lineWidth = 2.2; c.lineCap = 'round';
+    for (let i = 0; i < 7; i++) {
+      const x = ((i * 157 + t * 300) % 1100) - 150, y = 50 + i * 28;
+      c.beginPath(); c.moveTo(x, y); c.bezierCurveTo(x + 40, y - 8, x + 80, y + 8, x + 120, y - 2); c.stroke();
+    }
+  }
+  /* 먼지 */
+  if (P.dust) {
+    for (let i = 0; i < 70; i++) {
+      const x = ((i * 61 + t * (200 + (i % 5) * 30)) % 860) - 30;
+      const y = 190 + (i * 37) % 100 + Math.sin(t * 2 + i) * 6;
+      c.fillStyle = 'rgba(160,125,70,' + (0.25 + (i % 3) * 0.12).toFixed(2) + ')';
+      c.beginPath(); c.arc(x, y, 1.5 + (i % 3), 0, 7); c.fill();
+    }
+  }
+  /* 나뭇잎 */
+  if (P.leaves) {
+    c.fillStyle = P.leaves;
+    for (let i = 0; i < 16; i++) {
+      const x = ((i * 91 + t * (160 + i * 9)) % 900) - 50;
+      const y = 70 + (i * 53) % 160 + Math.sin(t * 3 + i) * 12;
+      c.save(); c.translate(x, y); c.rotate(t * 4 + i); c.beginPath(); c.ellipse(0, 0, 5, 2.5, 0, 0, 7); c.fill(); c.restore();
+    }
+  }
+  /* 비 */
+  if (P.rain) {
+    c.strokeStyle = 'rgba(225,235,248,0.75)'; c.lineWidth = 1.6;
+    c.beginPath();
+    for (let i = 0; i < 150; i++) {
+      const x = ((i * 53.3 + t * 40) % 840) - 20;
+      const y = ((i * 97.7 + t * 520) % 330) - 20;
+      c.moveTo(x, y); c.lineTo(x - 4, y + 15);
+    }
+    c.stroke();
+  }
+}
+
+/* 움직이는 그림 하나만 돌린다 */
+let animCv = null, animN = 0, raf = 0, t0 = performance.now();
+function animate(cv, n) {
+  animCv = cv; animN = n;
+  cancelAnimationFrame(raf);
+  if (!cv) return;
+  if (reduce) { drawScene(cv, n, 1.3); return; }
+  const loop = now => { if (animCv && !document.hidden) drawScene(animCv, animN, (now - t0) / 1000); raf = requestAnimationFrame(loop); };
+  raf = requestAnimationFrame(loop);
+}
+function still(cv, n) { requestAnimationFrame(() => drawScene(cv, n, 1.3)); }
+
+/* ───────── 학생 화면 ───────── */
+const views = [...document.querySelectorAll('[data-view]')];
+const stepBtns = [...document.querySelectorAll('#steps [data-go]')];
+
+function setW(n) {
+  document.body.dataset.w = n || '';
+  const b = $('#badge');
+  if (n) {
+    b.hidden = false; b.dataset.w = n;
+    $('#badgeNo').textContent = n;
+    $('#badgeSub').textContent = n + '번 날씨 기자';
+    $('#badgeName').textContent = wOf(n).name;
+  } else b.hidden = true;
+}
+
+function show(step) {
+  S.step = step; if (step > S.max) S.max = step; save();
+  views.forEach(v => v.hidden = Number(v.dataset.view) !== step);
+  stepBtns.forEach(b => {
+    const k = Number(b.dataset.go);
+    b.disabled = k > S.max || (!S.n && k > 1);
+    b.classList.toggle('done', k < S.max);
+    if (k === step) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
+  });
+  ['msg1', 'msg2', 'msg3', 'msg4', 'msg5'].forEach(id => $('#' + id).textContent = '');
+  if (step === 1) renderDraw();
+  if (step === 2) renderLook();
+  if (step === 3) renderAreas();
+  if (step === 4) renderSort();
+  if (step === 5) renderMake();
+  if (step !== 2) animate(null);
+  window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+}
+stepBtns.forEach(b => b.addEventListener('click', () => { if (!b.disabled) show(Number(b.dataset.go)); }));
+document.querySelectorAll('[data-prev]').forEach(b => b.addEventListener('click', () => show(S.step - 1)));
+
+/* 1. 뽑기 */
+let slots = null;
+function renderDraw() {
+  const deck = $('#deck'), flip = $('#flip'), front = $('#front');
+  const taken = slots ? slots.filter(s => s.device).length : 0;
+  const left = 5 - taken;
+  $('#left').innerHTML = slots ? '남은 카드 <b>' + left + '</b>장' : '';
+  deck.dataset.left = S.n ? 0 : (slots ? left : 5);
+  const list = $('#ownList'); list.textContent = '';
+  W.forEach(w => {
+    const s = slots && slots[w.n - 1];
+    const busy = s && s.device && s.device !== S.device;
+    list.append(el('button', { type: 'button', 'data-w': w.n, disabled: busy || !!S.n, onclick: () => claim(w.n) },
+      el('span', { text: w.n }), (busy ? '(맡은 친구 있음) ' : '') + w.name));
+  });
+  if (S.n) {
+    const w = wOf(S.n);
+    front.dataset.w = S.n; front.textContent = '';
+    const cv = el('canvas', { 'aria-hidden': 'true' });
+    front.append(el('span', { class: 'no', text: S.n + '번 날씨' }), cv, el('strong', { text: w.name }));
+    flip.classList.add('open'); deck.disabled = true;
+    $('#revealMsg').hidden = false; $('#revealMsg').dataset.w = S.n;
+    $('#revealMsg').textContent = S.n + '번 날씨 기자가 되었습니다!';
+    $('#drawGuide').textContent = '이제 그림 속 마을을 살펴보며 이 날씨를 취재해 봅시다.';
+    $('#pickOwn').hidden = true;
+    $('#next1').disabled = false;
+    setTimeout(() => still(cv, S.n), reduce ? 0 : 450);
+  } else {
+    flip.classList.remove('open'); deck.disabled = false;
+    $('#revealMsg').hidden = true; $('#pickOwn').hidden = false;
+    $('#drawGuide').textContent = '카드를 뒤집으면 맡을 날씨가 나옵니다. 한 번 뽑은 날씨는 바꾸지 않고 끝까지 취재합니다.';
+    $('#next1').disabled = true;
+  }
+}
+let claiming = false, netFail = false;
+async function claim(want) {
+  if (S.n || claiming) return;
+  $('#drawErr').hidden = true;
+  if (!API_URL || (netFail && want)) {
+    let n = want;
+    if (!n) n = 1 + Math.floor(Math.random() * 5);
+    assign(n); return;
+  }
+  claiming = true; $('#deck').disabled = true;
+  try {
+    const r = await apiGet({ action: 'claim', device: S.device, want: want || '' });
+    if (r.ok) { assign(r.n); }
+    else {
+      const why = { full: '카드가 모두 배정되었습니다. 선생님께 알려 주세요.', taken: '그 날씨는 다른 친구가 맡았습니다. 다른 날씨를 골라 봅시다.' }[r.reason] || '카드를 뽑지 못했습니다. 다시 눌러 봅시다.';
+      $('#drawErr').textContent = why; $('#drawErr').hidden = false;
+      await refreshSlots(); renderDraw();
+    }
+  } catch (e) {
+    netFail = true;
+    $('#drawErr').textContent = '방송국과 연결이 되지 않습니다. 잠시 뒤 다시 눌러 봅시다. 그래도 안 되면 선생님이 정해 준 날씨를 아래에서 골라 봅시다.';
+    $('#drawErr').hidden = false; $('#deck').disabled = false; $('#pickOwn').open = true;
+  } finally { claiming = false; }
+}
+function assign(n) {
+  S.n = n; save(); setW(n); show(1);
+}
+$('#deck').addEventListener('click', () => claim(0));
+$('#next1').addEventListener('click', () => { if (S.n) { show(2); sync(2); } });
+
+async function refreshSlots() {
+  if (!API_URL) { slots = null; return true; }
+  try { const r = await apiGet({ action: 'state' }); slots = r.slots || null; return true; }
+  catch (e) { slots = null; return false; }
+}
+
+/* 2. 살펴보기 */
+function renderLook() {
+  const w = wOf(S.n);
+  animate($('#scene'), S.n);
+  const box = $('#gauges'); box.textContent = '';
+  GAUGES.forEach(gd => {
+    const v = w.g[gd.k];
+    if (!v) {
+      box.append(el('div', { class: 'gauge off' }, el('span', { class: 'name', text: gd.name }), el('span', { class: 'bar', text: '설명에 없음' })));
+      return;
+    }
+    const hi = v === 'high' || v === 'yes';
+    const dot = el('span', { class: 'dot', style: 'left:' + (hi ? 78 : 22) + '%', text: hi ? gd.hi : gd.lo });
+    box.append(el('div', { class: 'gauge' }, el('span', { class: 'name', text: gd.name }),
+      el('span', { class: 'bar' }, el('span', { text: gd.lo }), el('span', { text: gd.hi }), dot)));
+  });
+  const sc = $('#seasons'); sc.textContent = '';
+  SEASONS.forEach(s => {
+    sc.append(el('button', { type: 'button', class: 'chip', 'aria-pressed': S.seasons.includes(s) ? 'true' : 'false', text: s, onclick: e => {
+      const i = S.seasons.indexOf(s);
+      if (i >= 0) S.seasons.splice(i, 1); else S.seasons.push(s);
+      S.seasons.sort((a, b) => SEASONS.indexOf(a) - SEASONS.indexOf(b));
+      e.currentTarget.setAttribute('aria-pressed', i >= 0 ? 'false' : 'true');
+      save(); seasonHint();
+    } }));
+  });
+  seasonHint();
+}
+function seasonHint() {
+  const h = $('#seasonHint');
+  if (!S.seasons.length) { h.hidden = true; return; }
+  h.hidden = false; h.innerHTML = '<b>교과서에서 찾아보기</b> ' + wOf(S.n).seasonHint;
+}
+
+/* 3. 생활 취재 */
+const areaDone = id => (S.picks[id] || []).length > 0;
+function renderAreas() {
+  const tabs = $('#areaTabs'); tabs.textContent = '';
+  AREAS.forEach(a => {
+    const b = el('button', { type: 'button', class: 'area-tab' + (areaDone(a.id) ? ' done' : ''), role: 'tab', 'aria-selected': S.area === a.id ? 'true' : 'false', onclick: () => { S.area = a.id; save(); renderAreas(); } });
+    b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + a.icon + '</svg>';
+    b.append(el('span', { text: a.name }));
+    tabs.append(b);
+  });
+  const a = AREAS.find(x => x.id === S.area) || AREAS[0];
+  const w = wOf(S.n);
+  $('#areaAsk').textContent = '이런 날, ' + a.name + '에는 어떤 일이 생길까요? 알맞은 것을 모두 골라 봅시다.';
+  const box = $('#areaChips'); box.textContent = '';
+  const warn = $('#areaWarn'); warn.hidden = true;
+  const picks = S.picks[a.id] || (S.picks[a.id] = []);
+  w.areas[a.id].forEach((it, i) => {
+    box.append(el('button', { type: 'button', class: 'chip', 'aria-pressed': picks.includes(i) ? 'true' : 'false', text: it.t, onclick: e => {
+      const btn = e.currentTarget;
+      if (it.x) {
+        btn.classList.remove('wrong'); void btn.offsetWidth; btn.classList.add('wrong');
+        warn.innerHTML = ''; warn.append(el('b', { text: '다시 생각해 봅시다. ' }), it.x); warn.hidden = false;
+        return;
+      }
+      const j = picks.indexOf(i);
+      if (j >= 0) picks.splice(j, 1); else picks.push(i);
+      picks.sort((p, q) => p - q);
+      btn.setAttribute('aria-pressed', j >= 0 ? 'false' : 'true');
+      save(); updateAreaMeta();
+    } }));
+  });
+  const note = $('#areaNote'); note.value = S.notes[a.id] || '';
+  updateAreaMeta();
+}
+function updateAreaMeta() {
+  const done = AREAS.filter(a => areaDone(a.id)).length;
+  $('#areaCount').innerHTML = '취재한 분야 <b>' + done + '</b> / 6';
+  document.querySelectorAll('.area-tab').forEach((b, i) => b.classList.toggle('done', areaDone(AREAS[i].id)));
+  const idx = AREAS.findIndex(x => x.id === S.area);
+  $('#areaNext').hidden = idx === AREAS.length - 1;
+}
+$('#areaNote').addEventListener('input', e => { S.notes[S.area] = e.target.value; save(); });
+$('#areaNext').addEventListener('click', () => {
+  const idx = AREAS.findIndex(x => x.id === S.area);
+  S.area = AREAS[Math.min(idx + 1, AREAS.length - 1)].id; save(); renderAreas();
+  $('#areaPanel').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+});
+
+/* 4. 나누기 */
+function items() {
+  const w = wOf(S.n), out = [];
+  AREAS.forEach(a => {
+    (S.picks[a.id] || []).forEach(i => out.push({ key: 'c:' + a.id + ':' + i, text: w.areas[a.id][i].t, area: a.name }));
+    const note = (S.notes[a.id] || '').trim();
+    if (note) out.push({ key: 'n:' + a.id, text: note, area: a.name, mine: true });
+  });
+  return out;
+}
+function renderSort() {
+  const its = items();
+  const keys = new Set(its.map(x => x.key));
+  Object.keys(S.sort).forEach(k => { if (!keys.has(k)) delete S.sort[k]; });
+  save();
+  const box = $('#sorter'); box.textContent = '';
+  its.forEach(it => {
+    const v = S.sort[it.key];
+    const row = el('div', { class: 'item' + (v === 'good' ? ' is-g' : v === 'bad' ? ' is-b' : '') },
+      el('span', { class: 'tx' }, el('small', { text: it.mine ? it.area + ' · 내 생각' : it.area }), it.text),
+      el('span', { class: 'two' },
+        el('button', { type: 'button', class: 'g', 'aria-pressed': v === 'good' ? 'true' : 'false', text: '좋은 점', onclick: () => { S.sort[it.key] = 'good'; save(); renderSort(); } }),
+        el('button', { type: 'button', class: 'b', 'aria-pressed': v === 'bad' ? 'true' : 'false', text: '불편한 점', onclick: () => { S.sort[it.key] = 'bad'; save(); renderSort(); } })));
+    box.append(row);
+  });
+  const g = its.filter(x => S.sort[x.key] === 'good').length, b = its.filter(x => S.sort[x.key] === 'bad').length;
+  $('#tally').innerHTML = '';
+  $('#tally').append(el('span', { class: 'g', text: '좋은 점 ' + g + '개' }), el('span', { class: 'b', text: '불편한 점 ' + b + '개' }), el('span', { text: '아직 안 나눈 것 ' + (its.length - g - b) + '개' }));
+  const pc = $('#prepChips'); pc.textContent = '';
+  wOf(S.n).prep.forEach((p, i) => {
+    pc.append(el('button', { type: 'button', class: 'chip', 'aria-pressed': S.prep.includes(i) ? 'true' : 'false', text: p, onclick: e => {
+      const j = S.prep.indexOf(i);
+      if (j >= 0) S.prep.splice(j, 1); else S.prep.push(i);
+      S.prep.sort((p1, p2) => p1 - p2);
+      e.currentTarget.setAttribute('aria-pressed', j >= 0 ? 'false' : 'true'); save();
+    } }));
+  });
+  $('#prepNote').value = S.prepNote || '';
+}
+$('#prepNote').addEventListener('input', e => { S.prepNote = e.target.value; save(); });
+
+/* 다음 단계 확인 */
+document.querySelectorAll('[data-next]').forEach(b => b.addEventListener('click', () => {
+  const k = Number(b.dataset.next);
+  const msg = $('#msg' + k);
+  if (k === 2 && !S.seasons.length) { msg.textContent = '계절을 하나 이상 골라 봅시다.'; return; }
+  if (k === 3) {
+    const left = AREAS.filter(a => !areaDone(a.id)).map(a => a.name);
+    if (left.length) { msg.textContent = '아직 취재하지 않은 분야: ' + left.join(', '); return; }
+  }
+  if (k === 4) {
+    const its = items();
+    if (its.some(x => !S.sort[x.key])) { msg.textContent = '모든 내용을 좋은 점이나 불편한 점으로 나누어 봅시다.'; return; }
+    if (!S.prep.length && !(S.prepNote || '').trim()) { msg.textContent = '대비 방법을 하나 이상 골라 봅시다.'; return; }
+  }
+  show(k + 1); sync(k + 1);
+}));
+
+/* 5. 뉴스 카드 */
+function buildCard(stage) {
+  const w = wOf(S.n);
+  const areas = {};
+  AREAS.forEach(a => { areas[a.name] = { picks: (S.picks[a.id] || []).map(i => w.areas[a.id][i].t), note: (S.notes[a.id] || '').trim() }; });
+  const its = items();
+  return {
+    n: S.n, name: w.name, stage,
+    seasons: S.seasons.slice(), areas,
+    good: its.filter(x => S.sort[x.key] === 'good').map(x => x.text),
+    bad: its.filter(x => S.sort[x.key] === 'bad').map(x => x.text),
+    prep: S.prep.map(i => w.prep[i]), prepNote: (S.prepNote || '').trim(),
+    comment: (S.comment || '').trim()
+  };
+}
+function newsCard(card) {
+  const n = card.n, w = wOf(n);
+  const list = (arr, cls, title, extra) => {
+    const ul = el('ul');
+    const all = arr.slice(); if (extra) all.push(extra);
+    if (!all.length) ul.append(el('li', { class: 'empty', text: '아직 없습니다' }));
+    all.forEach(x => ul.append(el('li', { text: x })));
+    return el('section', { class: 'news-box ' + cls }, el('h4', { text: title }), ul);
+  };
+  const cv = el('canvas', { 'aria-hidden': 'true' });
+  const say = card.comment
+    ? el('p', { class: 'news-say' }, '“' + card.comment + '”', el('small', { text: n + '번 날씨 기자' }))
+    : el('p', { class: 'news-say empty', text: '기자의 한마디를 기다리는 중입니다.' });
+  const art = el('article', { class: 'news', 'data-w': n },
+    el('div', { class: 'news-top' }, el('span', { class: 'live', text: '날씨 특보' }), el('span', { class: 'ch', text: '점곡 날씨 방송국' })),
+    el('div', { class: 'news-title' }, el('span', { class: 'no', text: n + '번' }), el('h3', { text: w.name })),
+    cv,
+    el('div', { class: 'news-body' },
+      el('p', { class: 'news-season' }, '이 날씨는 ', el('b', { text: card.seasons && card.seasons.length ? card.seasons.join(', ') : '?' }), '에 자주 볼 수 있습니다.'),
+      el('div', { class: 'news-cols' }, list(card.good || [], 'g', '좋은 점'), list(card.bad || [], 'b', '불편한 점')),
+      list(card.prep || [], 'p', '이렇게 대비해 봅시다', card.prepNote || null),
+      say));
+  still(cv, n);
+  return art;
+}
+function renderMake() {
+  $('#comment').value = S.comment || '';
+  drawMyCard();
+  const sent = $('#sent');
+  if (S.sentAt) { sent.hidden = false; sent.className = 'sent'; sent.textContent = '방송국으로 보냈습니다. 고친 뒤 다시 보내도 됩니다.'; }
+  else sent.hidden = true;
+}
+function drawMyCard() { const box = $('#myCard'); box.textContent = ''; box.append(newsCard(buildCard(5))); }
+let typing = 0;
+$('#comment').addEventListener('input', e => { S.comment = e.target.value; save(); clearTimeout(typing); typing = setTimeout(drawMyCard, 300); });
+$('#send').addEventListener('click', async () => {
+  const msg = $('#msg5'); msg.textContent = '';
+  if ((S.comment || '').trim().length < 5) { msg.textContent = '기자의 한마디를 다섯 글자 넘게 써 봅시다.'; $('#comment').focus(); return; }
+  const sent = $('#sent');
+  if (!API_URL) {
+    S.sentAt = Date.now(); save();
+    sent.hidden = false; sent.className = 'sent err';
+    sent.textContent = '방송국 주소가 연결되지 않아 이 태블릿에만 저장했습니다. 이 화면을 띄워 발표해 봅시다.';
+    return;
+  }
+  const btn = $('#send'); btn.disabled = true; btn.textContent = '보내는 중...';
+  try {
+    const r = await apiPost({ action: 'save', device: S.device, n: S.n, card: buildCard(6) });
+    if (r.ok) {
+      S.sentAt = Date.now(); save();
+      sent.hidden = false; sent.className = 'sent'; sent.textContent = '방송국으로 보냈습니다. 고친 뒤 다시 보내도 됩니다.';
+    } else {
+      sent.hidden = false; sent.className = 'sent err';
+      sent.textContent = r.reason === 'notyours' ? '다른 태블릿이 이 날씨를 맡고 있습니다. 선생님께 알려 주세요.' : '보내지 못했습니다. 다시 눌러 봅시다.';
+    }
+  } catch (e) {
+    sent.hidden = false; sent.className = 'sent err'; sent.textContent = '방송국과 연결이 되지 않습니다. 잠시 뒤 다시 눌러 봅시다.';
+  } finally { btn.disabled = false; btn.textContent = '방송국으로 보내기'; }
+});
+
+/* 진행 상황을 선생님 화면에 알린다 */
+function sync(stage) {
+  if (!API_URL || !S.n) return;
+  apiPost({ action: 'save', device: S.device, n: S.n, card: buildCard(stage) }).catch(() => {});
+}
+
+/* 다시 하기: 두 번 눌러야 지운다 */
+let restartArm = 0;
+$('#restart').addEventListener('click', async e => {
+  const b = e.currentTarget;
+  if (Date.now() - restartArm > 3000) { restartArm = Date.now(); b.textContent = '한 번 더 누르면 모두 지워집니다'; setTimeout(() => { b.textContent = '처음부터 다시 하기'; }, 3000); return; }
+  restartArm = 0; b.textContent = '처음부터 다시 하기';
+  if (API_URL && S.n) { try { await apiGet({ action: 'release', device: S.device }); } catch (err) {} }
+  S = fresh(S.device); save(); setW(0); await refreshSlots(); show(1);
+});
+
+/* ───────── 선생님 화면 ───────── */
+let tTimer = 0, tSlots = null, presentN = 0, focusRow = -1, tSig = '';
+const ROWS = [
+  { label: '자주 볼 수 있는 계절', get: c => ({ list: c.seasons || [] }) },
+  ...AREAS.map(a => ({ label: a.name, get: c => { const v = (c.areas || {})[a.name] || {}; return { list: v.picks || [], mine: v.note ? [v.note] : [] }; } })),
+  { label: '좋은 점', get: c => ({ list: c.good || [] }) },
+  { label: '불편한 점', get: c => ({ list: c.bad || [] }) },
+  { label: '대비 방법', get: c => ({ list: c.prep || [], mine: c.prepNote ? [c.prepNote] : [] }) },
+  { label: '기자의 한마디', get: c => ({ say: c.comment || '' }) }
+];
+function stageText(s) {
+  if (!s || !s.device) return ['배정 전', 'wait'];
+  if (s.stage >= 6) return ['카드 도착', 'done'];
+  if (s.stage >= 2) return [s.stage + '단계 하는 중', 'ing'];
+  return ['날씨를 뽑았습니다', 'ing'];
+}
+function renderTeacher(force) {
+  const sig = JSON.stringify(tSlots) + '|' + focusRow + '|' + innerWidth;
+  if (!force && sig === tSig) return;
+  tSig = sig;
+  const sl = $('#slots'); sl.textContent = '';
+  W.forEach(w => {
+    const s = tSlots && tSlots[w.n - 1];
+    const [txt, cls] = stageText(s);
+    const acts = el('div', { class: 'acts' });
+    if (s && s.data) acts.append(el('button', { type: 'button', class: 'btn small', text: '크게 보기', onclick: () => openPresent(w.n) }));
+    if (s && s.device) {
+      let arm = 0;
+      acts.append(el('button', { type: 'button', class: 'btn small', text: '배정 풀기', onclick: async e => {
+        const b = e.currentTarget;
+        if (Date.now() - arm > 3000) { arm = Date.now(); b.textContent = '한 번 더'; setTimeout(() => { b.textContent = '배정 풀기'; }, 3000); return; }
+        try { await apiGet({ action: 'release', n: w.n, key: TEACHER_KEY }); } catch (err) {}
+        pollTeacher();
+      } }));
+    }
+    sl.append(el('div', { class: 'slot', 'data-w': w.n },
+      el('div', { class: 'sn' }, el('span', { text: w.n }), el('strong', { text: w.short })),
+      el('span', { class: 'st ' + cls, text: txt }), acts));
+  });
+
+  const tb = $('#board'); tb.textContent = '';
+  const hr = el('tr', {}, el('th', { text: '' }));
+  W.forEach(w => {
+    const cv = el('canvas', { 'aria-hidden': 'true' });
+    const btn = el('button', { type: 'button', style: 'border:0;background:none;padding:0;text-align:left;width:100%', onclick: () => openPresent(w.n) },
+      el('span', { class: 'hn' }, el('span', { text: w.n }), w.name), cv);
+    hr.append(el('th', { 'data-w': w.n }, btn));
+    still(cv, w.n);
+  });
+  tb.append(el('thead', {}, hr));
+  const body = el('tbody');
+  ROWS.forEach((row, ri) => {
+    const tr = el('tr', { class: focusRow === -1 ? '' : (focusRow === ri ? 'focus' : 'dim') });
+    tr.append(el('th', {}, el('button', { type: 'button', text: row.label, onclick: () => { focusRow = focusRow === ri ? -1 : ri; renderTeacher(); } })));
+    W.forEach(w => {
+      const s = tSlots && tSlots[w.n - 1];
+      const card = s && s.data;
+      const td = el('td', { class: row.label === '기자의 한마디' ? 'say' : '' });
+      if (!card) { td.append(el('span', { class: 'none', text: '—' })); tr.append(td); return; }
+      const v = row.get(card);
+      if ('say' in v) { td.append(v.say ? el('span', { text: '“' + v.say + '”' }) : el('span', { class: 'none', text: '—' })); tr.append(td); return; }
+      const ul = el('ul');
+      v.list.forEach(x => ul.append(el('li', { text: x })));
+      (v.mine || []).forEach(x => ul.append(el('li', { class: 'mine', text: x })));
+      td.append(ul.childNodes.length ? ul : el('span', { class: 'none', text: '—' }));
+      tr.append(td);
+    });
+    body.append(tr);
+  });
+  tb.append(body);
+  if (presentN) drawPresent();
+}
+function renderThink() {
+  const ul = $('#think'); ul.textContent = '';
+  THINK.forEach(x => {
+    const pair = el('span', { class: 'pair' }, ...x.p.map(n => el('i', { 'data-w': n, text: n })));
+    ul.append(el('li', {}, x.p.length ? pair : null, el('span', { text: x.q })));
+  });
+}
+async function pollTeacher() {
+  const conn = $('#conn');
+  if (!API_URL) {
+    $('#setup').hidden = false; conn.className = 'conn off'; conn.lastChild.textContent = '연결 안 됨';
+    tSlots = null; renderTeacher(); return;
+  }
+  try {
+    const r = await apiGet({ action: 'state' });
+    tSlots = r.slots || null;
+    const d = new Date();
+    conn.className = 'conn on'; conn.lastChild.textContent = '연결됨 · ' + d.getHours() + '시 ' + String(d.getMinutes()).padStart(2, '0') + '분 ' + String(d.getSeconds()).padStart(2, '0') + '초에 새로 받음';
+  } catch (e) {
+    conn.className = 'conn off'; conn.lastChild.textContent = '연결이 잠시 끊겼습니다. 다시 시도하는 중';
+  }
+  renderTeacher();
+}
+function openPresent(n) { presentN = n; $('#present').hidden = false; drawPresent(); }
+function drawPresent() {
+  const s = tSlots && tSlots[presentN - 1];
+  const box = $('#pCard'); box.textContent = '';
+  const card = (s && s.data) || { n: presentN, seasons: [], good: [], bad: [], prep: [], comment: '' };
+  card.n = presentN;
+  box.append(newsCard(card));
+}
+const movePresent = d => { presentN = ((presentN - 1 + d + 5) % 5) + 1; drawPresent(); };
+$('#pClose').addEventListener('click', () => { presentN = 0; $('#present').hidden = true; });
+$('#pPrev').addEventListener('click', () => movePresent(-1));
+$('#pNext').addEventListener('click', () => movePresent(1));
+document.addEventListener('keydown', e => {
+  if ($('#present').hidden) return;
+  if (e.key === 'Escape') $('#pClose').click();
+  if (e.key === 'ArrowLeft') movePresent(-1);
+  if (e.key === 'ArrowRight') movePresent(1);
+});
+let resetArm = 0;
+$('#resetAll').addEventListener('click', async e => {
+  const b = e.currentTarget, m = $('#tmsg');
+  if (Date.now() - resetArm > 4000) { resetArm = Date.now(); b.textContent = '한 번 더 누르면 모든 카드가 지워집니다'; setTimeout(() => { b.textContent = '처음 상태로 비우기'; }, 4000); return; }
+  resetArm = 0; b.textContent = '처음 상태로 비우기';
+  if (!API_URL) { m.textContent = '연결된 방송국이 없습니다.'; return; }
+  try { await apiGet({ action: 'reset', key: TEACHER_KEY }); m.textContent = '모든 카드를 비웠습니다.'; } catch (err) { m.textContent = '비우지 못했습니다. 다시 눌러 주세요.'; }
+  pollTeacher();
+});
+
+/* ───────── 화면 고르기 ───────── */
+function route() {
+  const teacher = location.hash === '#teacher';
+  $('#steps').hidden = teacher; $('#teacher').hidden = !teacher;
+  $('#toTeacher').hidden = teacher; $('#toStudent').hidden = !teacher; $('#restart').hidden = teacher;
+  clearInterval(tTimer);
+  if (teacher) {
+    views.forEach(v => v.hidden = true); $('#badge').hidden = true; animate(null);
+    document.body.dataset.w = '';
+    renderThink(); pollTeacher();
+    tTimer = setInterval(() => { if (!document.hidden) pollTeacher(); }, 5000);
+  } else {
+    $('#present').hidden = true; presentN = 0;
+    setW(S.n); show(S.n ? S.step : 1);
+  }
+}
+$('#toStudent').addEventListener('click', e => { e.preventDefault(); try { history.replaceState(null, '', location.pathname + location.search); } catch (err) { location.hash = ''; } route(); });
+window.addEventListener('hashchange', route);
+window.addEventListener('resize', () => { if (location.hash === '#teacher') renderTeacher(); else if (S.step === 1 && S.n) renderDraw(); });
+
+/* 시작: 방송국에서 배정 상태를 받아 이 태블릿 기록과 맞춘다 */
+(async () => {
+  route();
+  if (location.hash === '#teacher') return;
+  const ok = await refreshSlots();
+  if (ok && slots && S.n) {
+    const mine = slots[S.n - 1];
+    if (!mine || mine.device !== S.device) { S = fresh(S.device); save(); setW(0); }
+  }
+  if (location.hash !== '#teacher') show(S.n ? S.step : 1);
+})();
+})();
+</script>
+
+</body>
+</html>
